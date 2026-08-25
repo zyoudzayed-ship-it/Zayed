@@ -1,48 +1,49 @@
-
 import os
-import gradio as gr
+import streamlit as st
 import torch
 import torchaudio
 from demucs.pretrained import get_model
 from demucs.apply import apply_model
 
-# تحميل النموذج
-model = get_model('htdemucs')
+st.set_page_config(page_title="أداة عزل الموسيقى", page_icon="🎤")
 
-def separate_audio(audio_path):
-    if audio_path is None:
-        return None, None
+st.title("🎤 أداة عزل الموسيقى عن الصوت")
+st.write("رفع الملف لعزل الموسيقى منه فوراً وبجودة عالية.")
 
-    wav, sr = torchaudio.load(audio_path)
-    ref = wav.mean(0)
-    wav = (wav - ref.mean()) / ref.std()
+@st.cache_resource
+def load_demucs_model():
+    return get_model('htdemucs')
 
-    sources = apply_model(model, wav[None], shifts=0, split=True, overlap=0.25)[0]
-    sources = sources * ref.std() + ref.mean()
+model = load_demucs_model()
 
-    vocals_path = "vocals.wav"
-    music_path = "music.wav"
+uploaded_file = st.file_uploader("ارفع ملف الصوت هنا", type=["mp3", "wav", "m4a", "ogg"])
 
-    torchaudio.save(vocals_path, sources[3], sr)
-    torchaudio.save(music_path, sources[0] + sources[1] + sources[2], sr)
+if uploaded_file is not None:
+    input_path = "temp_input.wav"
+    with open(input_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
 
-    return vocals_path, music_path
+    if st.button("بدء الفصل الآن", type="primary"):
+        with st.spinner("جاري معالجة الصوت وعزل الموسيقى... قد يستغرق هذا بضع ثوانٍ"):
+            wav, sr = torchaudio.load(input_path)
+            ref = wav.mean(0)
+            wav = (wav - ref.mean()) / ref.std()
 
-with gr.Blocks(title="أداة عزل الموسيقى") as demo:
-    gr.Markdown("# 🎤 أداة عزل الموسيقى عن الصوت")
-    gr.Markdown("رفع الملف لعزل الموسيقى منه فوراً وبجودة عالية.")
+            sources = apply_model(model, wav[None], shifts=0, split=True, overlap=0.25)[0]
+            sources = sources * ref.std() + ref.mean()
 
-    audio_input = gr.Audio(type="filepath", label="ارفع ملف الصوت أو الفيديو هنا")
-    btn = gr.Button("بدء الفصل الآن", variant="primary")
+            vocals_path = "vocals.wav"
+            music_path = "music.wav"
 
-    with gr.Column():
-        vocal_output = gr.Audio(label="🎤 الصوت البشري (بدون موسيقى)")
-        music_output = gr.Audio(label="🎵 الموسيقى وحدها")
+            torchaudio.save(vocals_path, sources[3], sr)
+            torchaudio.save(music_path, sources[0] + sources[1] + sources[2], sr)
 
-    btn.click(
-        fn=separate_audio,
-        inputs=[audio_input],
-        outputs=[vocal_output, music_output]
-    )
+        st.success("تم الفصل بنجاح!")
 
-demo.launch(server_name="0.0.0.0", server_port=7860)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("🎤 الصوت البشري")
+            st.audio(vocals_path)
+        with col2:
+            st.subheader("🎵 الموسيقى وحدها")
+            st.audio(music_path)
