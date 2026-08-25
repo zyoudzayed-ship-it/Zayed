@@ -2,4 +2,3 @@ streamlit
 demucs
 torch
 torchaudio
-pydub
