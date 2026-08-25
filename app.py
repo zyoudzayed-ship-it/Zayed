@@ -4,7 +4,6 @@ import torch
 import torchaudio
 from demucs.pretrained import get_model
 from demucs.apply import apply_model
-import moviepy.editor as mp
 
 st.set_page_config(page_title="أداة عزل الموسيقى", page_icon="🎤")
 
@@ -25,24 +24,14 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split(".")[-1].lower()
     input_path = f"temp_input.{file_extension}"
-    converted_audio_path = "converted_sound.wav"
     
     with open(input_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
     if st.button("بدء الفصل الآن", type="primary"):
-        with st.spinner("جاري معالجة الملف واستخراج الصوت... قد يستغرق هذا بضع ثوانٍ"):
+        with st.spinner("جاري معالجة الملف وعزل الموسيقى... قد يستغرق بضع ثوانٍ"):
             try:
-                # إذا كان الملف فيديو، نستخرج منه الصوت أولاً
-                if file_extension in ["mp4", "mov", "mkv", "avi"]:
-                    video = mp.VideoFileClip(input_path)
-                    video.audio.write_audiofile(converted_audio_path, verbose=False, logger=None)
-                    audio_file_to_process = converted_audio_path
-                else:
-                    audio_file_to_process = input_path
-
-                # تحميل الصوت ومعالجته
-                wav, sr = torchaudio.load(audio_file_to_process)
+                wav, sr = torchaudio.load(input_path)
                 
                 if wav.shape[0] > 2:
                     wav = wav[:2, :]
