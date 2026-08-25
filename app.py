@@ -4,6 +4,7 @@ import torch
 import torchaudio
 from demucs.pretrained import get_model
 from demucs.apply import apply_model
+from pydub import AudioSegment
 
 st.set_page_config(page_title="أداة عزل الموسيقى", page_icon="🎤")
 
@@ -24,14 +25,19 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split(".")[-1].lower()
     input_path = f"temp_input.{file_extension}"
+    converted_audio_path = "temp_audio.wav"
     
     with open(input_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
     if st.button("بدء الفصل الآن", type="primary"):
-        with st.spinner("جاري معالجة الملف وعزل الموسيقى... قد يستغرق بضع ثوانٍ"):
+        with st.spinner("جاري تحويل الملف وعزل الموسيقى..."):
             try:
-                wav, sr = torchaudio.load(input_path)
+                # تحويل الفيديو أو الصوت إلى WAV مستقل لتفادي خطأ TorchCodec
+                audio = AudioSegment.from_file(input_path)
+                audio.export(converted_audio_path, format="wav")
+
+                wav, sr = torchaudio.load(converted_audio_path)
                 
                 if wav.shape[0] > 2:
                     wav = wav[:2, :]
