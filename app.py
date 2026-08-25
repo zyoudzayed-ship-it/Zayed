@@ -4,11 +4,12 @@ import torch
 import torchaudio
 from demucs.pretrained import get_model
 from demucs.apply import apply_model
+from pydub import AudioSegment
 
 st.set_page_config(page_title="أداة عزل الموسيقى", page_icon="🎤")
 
 st.title("🎤 أداة عزل الموسيقى عن الصوت")
-st.write("ارفع ملف صوتي (MP3, WAV, M4A) لعزل الموسيقى عنه فوراً.")
+st.write("ارفع ملف صوتي (MP3, WAV) لعزل الموسيقى عنه فوراً.")
 
 @st.cache_resource
 def load_demucs_model():
@@ -16,19 +17,24 @@ def load_demucs_model():
 
 model = load_demucs_model()
 
-uploaded_file = st.file_uploader("ارفع الملف الصوتي هنا", type=["mp3", "wav", "m4a", "ogg"])
+uploaded_file = st.file_uploader("ارفع الملف الصوتي هنا", type=["mp3", "wav"])
 
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split(".")[-1].lower()
     input_path = f"temp_input.{file_extension}"
+    wav_path = "temp_sound.wav"
     
     with open(input_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
     if st.button("بدء الفصل الآن", type="primary"):
-        with st.spinner("جاري معالجة الصوت وعزل الموسيقى..."):
+        with st.spinner("جاري معالجة الصوت..."):
             try:
-                wav, sr = torchaudio.load(input_path)
+                # تحويل الصوت عبر pydub لتفادي مشاكل القراءة المباشرة
+                sound = AudioSegment.from_file(input_path)
+                sound.export(wav_path, format="wav")
+
+                wav, sr = torchaudio.load(wav_path)
                 
                 if wav.shape[0] > 2:
                     wav = wav[:2, :]
@@ -57,3 +63,4 @@ if uploaded_file is not None:
                     
             except Exception as e:
                 st.error(f"حدث خطأ أثناء المعالجة: {e}")
+
