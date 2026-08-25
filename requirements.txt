@@ -1,0 +1,6 @@
+flask
+demucs
+torch
+torchaudio
+gunicorn
+numpy
