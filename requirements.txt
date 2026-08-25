@@ -2,4 +2,4 @@ streamlit
 demucs
 torch
 torchaudio
-moviepy
+av
